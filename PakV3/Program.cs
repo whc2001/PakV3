@@ -14,7 +14,7 @@ namespace PakV3
         const string logFile = @"c:\JX3Dump\Run.log";
         static void Log(string message)
         {
-            Console.WriteLine(message);
+            //Console.WriteLine(message);
             //File.AppendAllText(logFile, $"{DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff")}  {message}{Environment.NewLine}");
         }
 
@@ -31,15 +31,16 @@ namespace PakV3
             PackageDataDecompressor decomp = new PackageDataDecompressor();
             Stopwatch sw = new Stopwatch();
             sw.Restart();
-            int maxThreads = 32;
+            int maxThreads = 8;
             List<Thread> threadList = new List<Thread>();
 
             bool dumpedToEnd = false;
-            while(!dumpedToEnd)
+            
+            for (int num = 0; num < maxThreads; num++)
             {
-                if (threadList.Count <= maxThreads)
+                Thread thread = new Thread(() =>
                 {
-                    Thread thread = new Thread(() =>
+                    while (true)
                     {
                         try
                         {
@@ -57,26 +58,36 @@ namespace PakV3
                         }
                         catch (EndOfStreamException ex)
                         {
-                            dumpedToEnd = true;
+                            break;
                         }
                         catch (Exception ex)
                         {
                             Log($">>> Error: {ex.Message}");
                         }
-                    });
-                    thread.Start();
-                    threadList.Add(thread);
-                }
+                    }
+                });
+                thread.Start();
+                threadList.Add(thread);
+            }
+            while (true)
+            {
+                int completeCount = 0;
                 foreach (var thread in threadList)
                 {
                     if (!thread.IsAlive)
                     {
-                        
+                        completeCount++;
                     }
                 }
+                if (completeCount == maxThreads)
+                {
+                    break;
+                }
+                Thread.Sleep(2000);
             }
             sw.Stop();
-            Log($"Finished, elapsed time = {sw.Elapsed.ToString("dd':'hh':'mm':'ss'.'fff")}");
+            //Log($"Finished, elapsed time = {sw.Elapsed.ToString("dd':'hh':'mm':'ss'.'fff")}");
+            Console.WriteLine($"Finished, elapsed time = {sw.Elapsed.ToString("dd':'hh':'mm':'ss'.'fff")}");
             Console.ReadKey();
         }
     }
